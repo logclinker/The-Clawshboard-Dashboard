@@ -2,25 +2,33 @@
 
 LAN-first mission control for OpenClaw.
 
-## What it is
-A lightweight web dashboard you can run on your OpenClaw gateway host to:
-- monitor host health (CPU/RAM/disk)
-- visualize your OpenClaw setup (BirdView)
-- drill into agents/sessions (AgentView)
-- track next actions via `WHATSNEXT.md` (WhatsNext view)
-- safely edit allowlisted agent files (with confirmation + backups)
+**Goal:** a modern, mobile-friendly dashboard to observe your agent “team” (BirdView), drill into agents and sessions (AgentView), and track next actions (WhatsNext) — without exposing secrets.
 
-## Features (current)
-- Sticky “thick” hardware HUD header (sparklines)
-- Views: BirdView / AgentView / WhatsNext
-- Multi-agent discovery (from `~/.openclaw/agents/*`)
+![Clawshboard desktop](docs/assets/desktop.png)
+
+## Why this exists
+OpenClaw has great runtime capabilities, but day-to-day operation needs:
+- a fast **hardware HUD** (CPU / memory / disk)
+- a clear map of **agents + state**
+- a safe way to edit “training”/ops files (`SOUL.md`, `MEMORY.md`, etc.)
+- a canonical “what’s next” checklist per agent/project (`WHATSNEXT.md`)
+
+Clawshboard is a lightweight web UI that reads OpenClaw state from disk and renders it in a clean, LAN-first dashboard.
+
+## Current features
+- Sticky “thick” header HUD with sparklines
+- Views:
+  - **BirdView** — at-a-glance team map (agents + skills)
+  - **AgentView** — sessions table + session detail modal + allowlisted editor
+  - **WhatsNext** — renders per-agent `WHATSNEXT.md` cards
+- Multi-agent discovery from `~/.openclaw/agents/*`
 - Safe editor (allowlist): `SOUL.md`, `USER.md`, `HEARTBEAT.md`, `MEMORY.md`, `TASKS.md`, `WHATSNEXT.md`
-- Session detail modal (tail messages + cost)
+- Confirmation modal on writes + best-effort server-side backups (`.bak.<timestamp>`)
 
-## Install & run
+## Quick start
 
 ```bash
-git clone <YOUR_REPO_URL>
+git clone <REPO_URL>
 cd clawshboard
 npm i
 cp config.example.json config.json
@@ -36,14 +44,13 @@ Edit `config.json`:
 - `paths.openclawHome` (default `~/.openclaw`)
 - `paths.defaultWorkspace` (default `~/.openclaw/workspace`)
 
-## Security
-No auth yet. Do **not** expose to the public internet.
-
-All writes are:
-- allowlisted by filename
-- constrained to the agent workspace
-- confirmed in UI
-- backed up server-side (`.bak.<timestamp>`) best-effort
+## Security notes
+- No auth yet: **do not expose to the public internet**.
+- Writes are restricted to an allowlist of filenames and constrained to an agent workspace.
+- Clawshboard intentionally avoids committing tokens/credentials.
 
 ## Roadmap
 See `docs/FEATURES.md`.
+
+## License
+MIT (see `LICENSE`).
