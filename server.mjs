@@ -81,11 +81,21 @@ app.get('/api/agents', (req, res) => {
 });
 
 app.get('/api/birdview', (req, res) => {
-  const agents = listAgents(openclawHome).map(id => ({
-    id,
-    workspace: agentWorkspaces[id] || null,
-    ...summarizeAgent(openclawHome, id),
-  }));
+  const runtimeIds = listAgents(openclawHome);
+  const configured = getConfiguredAgentList();
+  const allIds = new Set([...runtimeIds, ...configured.map(a => a.id)]);
+
+  const agents = [...allIds].sort().map(id => {
+    const summary = runtimeIds.includes(id) ? summarizeAgent(openclawHome, id) : { sessionsCount: 0, lastUpdatedAt: 0, activeCount: 0 };
+    const conf = configured.find(a => a.id === id);
+    return {
+      id,
+      workspace: agentWorkspaces[id] || conf?.workspace || null,
+      configured: !!conf,
+      active: runtimeIds.includes(id),
+      ...summary,
+    };
+  });
 
   // Skills/tools (best-effort) from openclaw.json
   const skills = [];
@@ -101,24 +111,9 @@ app.get('/api/birdview', (req, res) => {
   } catch {}
   skills.sort((a,b) => a.name.localeCompare(b.name));
 
-  const agentEntries = [];
-  try {
-    const entries = openclawConfig?.agents?.entries || {};
-    for (const [id, conf] of Object.entries(entries)) {
-      agentEntries.push({
-        id,
-        enabled: conf?.enabled !== false,
-        workspace: agentWorkspaces[id] || conf?.workspace || null,
-        model: conf?.model?.primary || conf?.model || null,
-      });
-    }
-  } catch {}
-  agentEntries.sort((a,b)=>a.id.localeCompare(b.id));
-
   res.json({
     openclawHome,
     agents,
-    agentEntries,
     skills,
     nodes: { status: 'not_connected', note: 'Nodes require Gateway tool access; not wired yet.' },
   });
