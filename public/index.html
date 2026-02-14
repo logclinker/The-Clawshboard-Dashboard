@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clawshboard</title>
+  <style>
+    :root{
+      --bg0:#070a12;
+      --bg1:#0b1020;
+
+      --card:rgba(255,255,255,.045);
+      --card2:rgba(255,255,255,.065);
+      --text:#e7eaf2;
+      --muted:#a1a8bb;
+      --dim:#7b8399;
+      --border:rgba(255,255,255,.09);
+
+      /* accents */
+      --accent:#60a5fa;      /* blue */
+      --accent2:#a78bfa;     /* purple */
+      --accent3:#34d399;     /* green */
+      --accent4:#fbbf24;     /* amber */
+      --accent5:#fb7185;     /* rose */
+
+      --good:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --shadow2:0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:radial-gradient(1200px 700px at 20% -10%, rgba(96,165,250,.25), transparent 55%),
+                 radial-gradient(900px 600px at 100% 0%, rgba(167,139,250,.20), transparent 55%),
+                 linear-gradient(180deg,var(--bg0),var(--bg1));
+      color:var(--text); min-height:100vh
+    }
+
+    /* THICK HEADER */
+    header{position:sticky;top:0;z-index:20;backdrop-filter: blur(10px); background:rgba(7,10,18,.70); border-bottom:1px solid var(--border)}
+    .topbar{max-width:none;margin:0;padding:14px 16px 12px 16px}
+    .topRow{display:flex;gap:14px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:42px;height:42px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:900;box-shadow:0 12px 30px rgba(96,165,250,.25)}
+    .title{font-weight:950;letter-spacing:.2px;font-size:15px}
+    .subtitle{color:var(--muted);font-size:12px;margin-top:2px}
+
+    .nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .navBtn{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);border-radius:14px;padding:10px 12px;font-weight:950;cursor:pointer;transition:transform .05s ease, border-color .15s ease, background .15s ease}
+    .navBtn:hover{border-color:rgba(255,255,255,.18)}
+    .navBtn:active{transform:translateY(1px)}
+    .navBtn.active{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.55)}
+    .navBtn.kind-bird.active{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.55)}
+    .navBtn.kind-agent.active{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.55)}
+    .navBtn.kind-next.active{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.55)}
+    .navBtn.kind-refresh{background:linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.02))}
+
+    .hud{margin-top:12px;display:grid;grid-template-columns:1.2fr 1fr 1fr 0.9fr;gap:10px}
+    .hudCard{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:var(--shadow2)}
+    .hudLeft{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .hudLabel{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.09em}
+    .hudValue{font-size:18px;font-weight:950;color:#fff;line-height:1.05}
+    .hudSub{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+    .hudSpark{width:180px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)}
+
+    main{max-width:none;margin:0;padding:16px}
+
+    /* shared UI */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.03));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .cardHeader{padding:12px 12px 10px 12px;border-bottom:1px solid rgba(255,255,255,.075);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .cardTitle{font-size:13px;font-weight:950;color:#fff;letter-spacing:.2px}
+    .cardBody{padding:12px}
+
+    .pill{font-size:12px;border:1px solid var(--border);padding:5px 10px;border-radius:999px;color:var(--muted);background:rgba(255,255,255,.03)}
+    .pill.good{color:#06160f;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.18)}
+    .pill.warn{color:#2a1a02;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.18)}
+    .pill.bad{color:#2a0811;border-color:rgba(251,113,133,.45);background:rgba(251,113,133,.18)}
+
+    button{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;border:0;border-radius:12px;padding:9px 11px;font-weight:950;cursor:pointer;box-shadow:0 10px 22px rgba(29,78,216,.18);transition:transform .05s ease, filter .15s ease}
+    button:hover{filter:brightness(1.06)}
+    button:active{transform:translateY(1px)}
+    button.secondary{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);box-shadow:none}
+    button.ai{background:linear-gradient(135deg, rgba(167,139,250,1), rgba(96,165,250,1));box-shadow:0 10px 22px rgba(167,139,250,.16)}
+    button.danger{background:linear-gradient(135deg, rgba(251,113,133,1), rgba(239,68,68,1));box-shadow:0 10px 22px rgba(251,113,133,.18)}
+    button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:var(--muted)}
+    a{color:var(--accent);text-decoration:none}
+
+    /* BirdView */
+    .birdLayout{display:grid;grid-template-columns:420px 1fr;gap:14px;align-items:start}
+    .agentList{display:flex;flex-direction:column;gap:8px}
+    .agentItem{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);cursor:pointer;transition:border-color .15s ease}
+    .agentItem:hover{border-color:rgba(96,165,250,.35)}
+    .agentItem.active{border-color:rgba(96,165,250,.55);background:rgba(96,165,250,.08)}
+    .agentLeft{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .agentName{font-weight:950;letter-spacing:.2px}
+    .agentMeta{display:flex;gap:8px;flex-wrap:wrap}
+
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px}
+    .tile{padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .tile pre{margin:10px 0 0 0;white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:13px;line-height:1.4}
+    .k{color:#fff;font-weight:900}
+
+    .tileTitle{font-weight:950}
+    .tileBody{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.35}
+    .list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .listItem{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.18)}
+
+    /* AgentView */
+    .agentLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    select{background:rgba(0,0,0,.28);color:var(--text);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:9px 10px;outline:none}
+    select:focus{border-color:rgba(96,165,250,.55);box-shadow:0 0 0 3px rgba(96,165,250,.12)}
+    textarea{width:100%;min-height:340px;resize:vertical;background:rgba(0,0,0,.25);color:var(--text);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.45}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top}
+    th{color:var(--muted);font-weight:900;font-size:12px}
+    tr.clickable{cursor:pointer}
+    tr.clickable:hover td{background:rgba(96,165,250,.06)}
+
+    .toast{position:fixed;right:16px;bottom:16px;min-width:260px;max-width:420px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);background:rgba(10,16,32,.85);backdrop-filter: blur(10px);box-shadow:var(--shadow);display:none}
+    .toast.show{display:block}
+    .toastTitle{font-weight:950}
+    .toastBody{margin-top:4px;color:var(--muted);font-size:13px}
+
+    @media (max-width: 1120px){
+      .hud{grid-template-columns:1fr 1fr;}
+      .hudSpark{width:160px}
+      .birdLayout{grid-template-columns:1fr}
+      .tiles{grid-template-columns:repeat(2,1fr)}
+      .agentLayout{grid-template-columns:1fr}
+    }
+    @media (max-width: 680px){
+      .hud{grid-template-columns:1fr;}
+      .tiles{grid-template-columns:1fr}
+      .hudSpark{width:140px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="topRow">
+        <div class="brand">
+          <div class="logo">🦞</div>
+          <div>
+            <div class="title">Clawshboard</div>
+            <div class="subtitle" id="subtitle">Loading…</div>
+          </div>
+        </div>
+
+        <div class="nav">
+          <button class="navBtn kind-bird" id="birdBtn">BirdView</button>
+          <button class="navBtn kind-agent" id="agentBtn">AgentView</button>
+          <button class="navBtn kind-next" id="nextBtn">WhatsNext</button>
+          <button class="navBtn kind-refresh" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="hud">
+        <div class="hudCard" style="border-color:rgba(96,165,250,.22)">
+          <div class="hudLeft">
+            <div class="hudLabel">CPU load</div>
+            <div class="hudValue" id="hudCpu">…</div>
+            <div class="hudSub" id="hudCpuSub">…</div>
+          </div>
+          <canvas id="cpuSpark" class="hudSpark" width="360" height="92"></canvas>
+        </div>
+
+        <div class="hudCard" style="border-color:rgba(167,139,250,.22)">
+          <div class="hudLeft">
+            <div class="hudLabel">Memory</div>
+            <div class="hudValue" id="hudMem">…</div>
+            <div class="hudSub" id="hudMemSub">…</div>
+          </div>
+          <canvas id="memSpark" class="hudSpark" width="360" height="92"></canvas>
+        </div>
+
+        <div class="hudCard" style="border-color:rgba(251,191,36,.22)">
+          <div class="hudLeft">
+            <div class="hudLabel">Disk</div>
+            <div class="hudValue" id="hudDisk">…</div>
+            <div class="hudSub" id="hudDiskSub">…</div>
+          </div>
+          <div class="pill" id="hudDiskPill">—</div>
+        </div>
+
+        <div class="hudCard" style="border-color:rgba(52,211,153,.22)">
+          <div class="hudLeft">
+            <div class="hudLabel">Agents</div>
+            <div class="hudValue" id="hudAgents">…</div>
+            <div class="hudSub" id="hudAgentsSub">…</div>
+          </div>
+          <div class="pill" id="hudAgentsPill">—</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- BIRD VIEW -->
+    <section id="birdView" style="display:none">
+      <div class="birdLayout">
+        <aside class="card">
+          <div class="cardHeader">
+            <div>
+              <div class="cardTitle">OpenClaw agents</div>
+              <div class="mono" id="openclawHome">…</div>
+            </div>
+            <span class="pill" id="agentCount">…</span>
+          </div>
+          <div class="cardBody">
+            <div class="agentList" id="agentList">Loading…</div>
+          </div>
+        </aside>
+
+        <section class="card">
+          <div class="cardHeader">
+            <div class="cardTitle">BirdView: team map</div>
+            <span class="pill" id="birdMeta">—</span>
+          </div>
+          <div class="cardBody">
+            <div class="tiles">
+              <div class="tile">
+                <div class="tileTitle">Agents</div>
+                <div class="tileBody">Quick status of each agent (active, last update, sessions). Click an agent to preview details.</div>
+              </div>
+              <div class="tile">
+                <div class="tileTitle">Tools / Skills</div>
+                <div class="tileBody">Skills from <span class="mono">openclaw.json</span>. (Tools list later via Gateway introspection.)</div>
+              </div>
+              <div class="tile">
+                <div class="tileTitle">Nodes</div>
+                <div class="tileBody">Not wired yet. Nodes require Gateway tool access. Will show paired devices + status.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px" class="grid2">
+              <div>
+                <div class="mono" style="margin-bottom:8px">Skills</div>
+                <div class="list" id="skillsList">Loading…</div>
+              </div>
+              <div>
+                <div class="mono" style="margin-bottom:8px">Selected agent preview</div>
+                <div class="list" id="agentPreview">Select an agent…</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- WHATS NEXT -->
+    <section id="nextView" style="display:none">
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <div class="cardTitle">WhatsNext</div>
+            <div class="mono">Reads per-agent <span class="mono">WHATSNEXT.md</span> (and later per-project).</div>
+          </div>
+          <span class="pill" id="nextMeta">—</span>
+        </div>
+        <div class="cardBody">
+          <div id="nextCards" class="tiles" style="grid-template-columns:repeat(2,1fr)">Loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AGENT VIEW -->
+    <section id="agentView" style="display:none">
+      <div class="agentLayout">
+        <section class="card">
+          <div class="cardHeader">
+            <div class="cardTitle">Agent detail</div>
+            <div class="row">
+              <select id="agentSelect"></select>
+              <button class="secondary" id="loadAgentBtn">Load</button>
+            </div>
+          </div>
+          <div class="cardBody">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-weight:950;font-size:20px" id="agentName">—</div>
+                <div class="mono" id="agentWorkspace">workspace: —</div>
+              </div>
+              <span class="pill" id="agentStatus">—</span>
+            </div>
+
+            <div style="margin-top:12px" class="mono">Sessions (recent)</div>
+            <div id="sessionsTable" style="overflow:auto;max-height:520px;margin-top:8px">Loading…</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="cardHeader">
+            <div class="cardTitle">Training / Notes</div>
+            <span class="pill" id="fileHeaderPill">Safe edit</span>
+          </div>
+          <div class="cardBody">
+            <div style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <select id="fileSelect" title="Allowlisted files">
+                  <option>SOUL.md</option>
+                  <option>USER.md</option>
+                  <option>HEARTBEAT.md</option>
+                  <option>MEMORY.md</option>
+                  <option>TASKS.md</option>
+                </select>
+                <button id="loadFileBtn" class="secondary">Load</button>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button id="aiImproveBtn" class="ai">Improve (AI)</button>
+                <button id="saveFileBtn" class="danger">Save</button>
+              </div>
+            </div>
+            <textarea id="fileEditor" spellcheck="false" placeholder="Load a file…"></textarea>
+            <div class="row" style="margin-top:10px;justify-content:space-between">
+              <span id="fileStatus" class="pill">Idle</span>
+              <span class="mono" id="fileHint">Allowlisted only</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">
+    <div class="toastTitle" id="toastTitle">—</div>
+    <div class="toastBody" id="toastBody">—</div>
+  </div>
+
+  <div id="modal" style="display:none;position:fixed;inset:0;z-index:50;">
+    <div id="modalBackdrop" style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
+    <div style="position:relative;max-width:1050px;margin:40px auto;padding:0 14px">
+      <div class="card" style="background:rgba(10,16,32,.92);backdrop-filter:blur(10px)">
+        <div class="cardHeader">
+          <div>
+            <div class="cardTitle" id="modalTitle">Session</div>
+            <div class="mono" id="modalSub">—</div>
+          </div>
+          <div class="row">
+            <button class="ai" id="modalExplain">Explain (AI)</button>
+            <span class="pill" id="modalCost">$—</span>
+            <button class="secondary" id="modalClose">Close</button>
+          </div>
+        </div>
+        <div class="cardBody">
+          <div id="modalBody" style="display:grid;grid-template-columns:1fr;gap:10px;max-height:70vh;overflow:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm" style="display:none;position:fixed;inset:0;z-index:60;">
+    <div id="confirmBackdrop" style="position:absolute;inset:0;background:rgba(0,0,0,.62)"></div>
+    <div style="position:relative;max-width:860px;margin:60px auto;padding:0 14px">
+      <div class="card" style="background:rgba(10,16,32,.92);backdrop-filter:blur(10px)">
+        <div class="cardHeader">
+          <div>
+            <div class="cardTitle" id="confirmTitle">Confirm</div>
+            <div class="mono" id="confirmSub">—</div>
+          </div>
+          <div class="row">
+            <button class="secondary" id="confirmCancel">Cancel</button>
+            <button id="confirmOk">Confirm</button>
+          </div>
+        </div>
+        <div class="cardBody">
+          <div id="confirmBody" style="color:var(--muted);font-size:13px;line-height:1.45"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  async function j(url, opts){
+    const r = await fetch(url, opts);
+    if(!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  function fmtBytes(n){
+    if(!Number.isFinite(n)) return String(n);
+    const units=['B','KB','MB','GB','TB'];
+    let i=0; let v=n;
+    while(v>=1024 && i<units.length-1){ v/=1024; i++; }
+    return v.toFixed(v>=10||i===0?0:1)+' '+units[i];
+  }
+
+  function toast(title, body){
+    $('toastTitle').textContent = title;
+    $('toastBody').textContent = body || '';
+    $('toast').classList.add('show');
+    clearTimeout(window.__toastT);
+    window.__toastT = setTimeout(()=> $('toast').classList.remove('show'), 2600);
+  }
+
+  function drawSpark(canvas, series, color){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    // grid
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    for(let i=1;i<=2;i++){
+      const y = Math.round(h*(i/3));
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    }
+    if(!series.length) return;
+    const min = Math.min(...series);
+    const max = Math.max(...series);
+    const pad = (max-min) === 0 ? 1 : (max-min);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i=0;i<series.length;i++){
+      const x = (i/(series.length-1)) * (w-2) + 1;
+      const v = (series[i]-min)/pad;
+      const y = (1-v) * (h-10) + 5;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = .14;
+    ctx.fillStyle = color;
+    ctx.lineTo(w-1,h-5); ctx.lineTo(1,h-5); ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // state
+  let agents = [];
+  let bird = null;
+  const hist = { cpu: [], mem: [] };
+
+  function setView(name){
+    const birdOn = name === 'bird';
+    const agentOn = name === 'agent';
+    const nextOn = name === 'next';
+
+    $('birdView').style.display = birdOn ? 'block' : 'none';
+    $('agentView').style.display = agentOn ? 'block' : 'none';
+    $('nextView').style.display = nextOn ? 'block' : 'none';
+
+    $('birdBtn').classList.toggle('active', birdOn);
+    $('agentBtn').classList.toggle('active', agentOn);
+    $('nextBtn').classList.toggle('active', nextOn);
+
+    localStorage.setItem('clawshboard:view', name);
+  }
+
+  function agentPillClass(memPct){
+    if(memPct >= 90) return 'bad';
+    if(memPct >= 75) return 'warn';
+    return 'good';
+  }
+
+  async function loadHealth(){
+    const h = await j('/api/health');
+    const cpu = h.cpu;
+    const mem = h.mem;
+    const disk = h.disk;
+
+    $('hudCpu').textContent = cpu.load1.toFixed(2);
+    $('hudCpuSub').textContent = `${cpu.cores} cores | load5 ${cpu.load5.toFixed(2)} | load15 ${cpu.load15.toFixed(2)}`;
+
+    const memPct = Math.round(mem.usedPct * 100);
+    $('hudMem').textContent = `${memPct}%`;
+    $('hudMemSub').textContent = `${fmtBytes(mem.used)} / ${fmtBytes(mem.total)}`;
+
+    $('hudDisk').textContent = disk?.capacity || 'n/a';
+    $('hudDiskSub').textContent = disk ? `mount ${disk.mount}` : '—';
+
+    // history
+    hist.cpu.push(cpu.load1);
+    hist.mem.push(memPct);
+    if(hist.cpu.length > 90) hist.cpu.shift();
+    if(hist.mem.length > 90) hist.mem.shift();
+
+    drawSpark($('cpuSpark'), hist.cpu, 'rgba(96,165,250,1)');
+    drawSpark($('memSpark'), hist.mem, 'rgba(167,139,250,1)');
+
+    $('subtitle').textContent = `Updated ${new Date(h.timestamp).toLocaleTimeString()}`;
+  }
+
+  async function loadBirdView(){
+    bird = await j('/api/birdview');
+    agents = bird.agents || [];
+
+    $('openclawHome').textContent = `openclaw: ${bird.openclawHome}`;
+    $('agentCount').textContent = `${agents.length}`;
+
+    // top HUD agents
+    const active = agents.reduce((n,a)=>n+(a.activeCount||0),0);
+    $('hudAgents').textContent = String(agents.length);
+    $('hudAgentsSub').textContent = `${active} active (15m window)`;
+    $('hudAgentsPill').textContent = active ? `active ${active}` : 'idle';
+    $('hudAgentsPill').className = active ? 'pill good' : 'pill';
+
+    // list
+    const list = agents.map(x => {
+      const wsOk = !!x.workspace;
+      const wsPill = wsOk ? '' : `<span class="pill warn">workspace?</span>`;
+      const activePill = x.activeCount > 0 ? `<span class="pill good">active ${x.activeCount}</span>` : `<span class="pill">idle</span>`;
+      return `
+        <div class="agentItem" data-agent="${x.id}">
+          <div class="agentLeft">
+            <div class="agentName">${x.id}</div>
+            <div class="agentMeta">${activePill}<span class="pill">sessions ${x.sessionsCount}</span>${wsPill}</div>
+          </div>
+          <div class="mono">${x.lastUpdatedAt ? new Date(x.lastUpdatedAt).toLocaleString() : ''}</div>
+        </div>
+      `;
+    }).join('');
+    $('agentList').innerHTML = list || `<div class="mono">No agents found.</div>`;
+
+    // skills
+    const skills = (bird.skills || []).slice(0, 80);
+    $('skillsList').innerHTML = skills.length
+      ? skills.map(s => `<div class="listItem"><div>${s.name}</div><span class="pill ${s.enabled ? 'good':''}">${s.enabled ? 'enabled':'disabled'}</span></div>`).join('')
+      : `<div class="mono">No skills found in openclaw.json</div>`;
+
+    $('birdMeta').textContent = `${skills.length} skills`;
+
+    // agent preview click
+    document.querySelectorAll('.agentItem').forEach(el => {
+      el.addEventListener('click', async () => {
+        document.querySelectorAll('.agentItem').forEach(x => x.classList.toggle('active', x===el));
+        const agentId = el.dataset.agent;
+        const s = await j(`/api/agent/${encodeURIComponent(agentId)}/sessions`);
+        const top = (s.sessions || []).slice(0,5);
+        $('agentPreview').innerHTML = top.length
+          ? top.map(x => {
+              const label = (x.label || x.origin?.label || x.key || '').toString().slice(0,90);
+              const model = (x.modelOverride || x.model || '-');
+              const updated = x.updatedAt ? new Date(x.updatedAt).toLocaleString() : '';
+              return `<div class="listItem"><div><div style="font-weight:900">${label}</div><div class="mono">${model} • ${updated}</div></div><span class="pill">${(x.kind || 'session')}</span></div>`;
+            }).join('')
+          : `<div class="mono">No sessions.</div>`;
+      });
+    });
+
+    // agent select (AgentView)
+    const ids = agents.map(a => a.id);
+    $('agentSelect').innerHTML = ids.map(id => `<option value="${id}">${id}</option>`).join('');
+    const storedAgent = localStorage.getItem('clawshboard:agent') || 'main';
+    $('agentSelect').value = ids.includes(storedAgent) ? storedAgent : (ids.includes('main') ? 'main' : ids[0]);
+  }
+
+  async function loadAgentView(){
+    const agentId = $('agentSelect').value;
+    localStorage.setItem('clawshboard:agent', agentId);
+
+    const a = agents.find(x => x.id === agentId);
+    $('agentName').textContent = agentId;
+    $('agentWorkspace').textContent = `workspace: ${a?.workspace || 'unknown'}`;
+    $('agentStatus').textContent = (a?.activeCount ? `active ${a.activeCount}` : 'idle');
+    $('agentStatus').className = a?.activeCount ? 'pill good' : 'pill';
+
+    const s = await j(`/api/agent/${encodeURIComponent(agentId)}/sessions`);
+    const sessions = (s.sessions || []).slice(0, 35);
+    const rows = sessions.map(x => {
+      const updated = x.updatedAt ? new Date(x.updatedAt).toLocaleString() : '';
+      const label = (x.label || x.origin?.label || x.key || '').toString().slice(0,90);
+      const sid = (x.sessionId || '').toString();
+      const model = (x.modelOverride || x.model || '-');
+      return `<tr class="clickable" data-session="${sid}"><td class="mono">${sid||'-'}</td><td>${label}</td><td class="mono">${model}</td><td class="mono">${updated}</td></tr>`;
+    }).join('');
+
+    $('sessionsTable').innerHTML = `
+      <table>
+        <thead><tr><th>sessionId</th><th>label</th><th>model</th><th>updated</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" class="mono">No sessions found.</td></tr>'}</tbody>
+      </table>
+    `;
+
+    // click-to-open session detail
+    $('sessionsTable').querySelectorAll('tr[data-session]').forEach(tr => {
+      tr.addEventListener('click', () => openSessionModal(agentId, tr.dataset.session));
+    });
+  }
+
+  async function openSessionModal(agentId, sessionId){
+    try{
+      $('modalTitle').textContent = `Session ${sessionId}`;
+      $('modalSub').textContent = `${agentId}`;
+      $('modalCost').textContent = '$…';
+      $('modalBody').innerHTML = `<div class="mono">Loading messages…</div>`;
+      $('modal').style.display = 'block';
+
+      const d = await j(`/api/agent/${encodeURIComponent(agentId)}/session/${encodeURIComponent(sessionId)}/detail?limit=120`);
+      $('modalCost').textContent = `$${(d.cost ?? 0).toFixed ? d.cost.toFixed(2) : d.cost}`;
+      $('modalSub').textContent = `${agentId} • ${d.messages?.length || 0} msgs (tail)`;
+
+      const blocks = (d.messages || []).map(m => {
+        const role = (m.role || 'unknown');
+        const ts = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
+        const model = m.model || '';
+        const header = `<div class="mono" style="display:flex;justify-content:space-between;gap:10px"><span><b style="color:#fff">${role}</b> ${model ? '• '+model : ''}</span><span>${ts}</span></div>`;
+        const text = (m.text || '').toString();
+        const safe = text.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        return `<div class="tile" style="background:rgba(255,255,255,.03)">${header}<div style="margin-top:6px;white-space:pre-wrap;word-break:break-word">${safe || '<span class=mono>(no text)</span>'}</div></div>`;
+      }).join('');
+
+      $('modalBody').innerHTML = blocks || `<div class="mono">No messages found.</div>`;
+    } catch(e){
+      toast('Session load failed', e.message);
+    }
+  }
+
+  async function loadFile(){
+    const agentId = $('agentSelect').value;
+    const filename = $('fileSelect').value;
+    $('fileStatus').textContent = 'Loading…';
+    $('fileStatus').className = 'pill';
+    try{
+      const r = await j(`/api/file?agentId=${encodeURIComponent(agentId)}&filename=${encodeURIComponent(filename)}`);
+      $('fileEditor').value = r.content || '';
+      $('fileStatus').textContent = 'Loaded';
+      $('fileStatus').className = 'pill good';
+      toast('Loaded', `${agentId}/${filename}`);
+    }catch(e){
+      $('fileStatus').textContent = 'Error';
+      $('fileStatus').className = 'pill bad';
+      toast('Load failed', e.message);
+    }
+  }
+
+  function parseWhatsNext(raw){
+    const out = { state: null, title: null, owner: null, updated: null, raw: raw || '' };
+    const lines = (raw || '').split('\n');
+    for(let i=0;i<Math.min(lines.length, 12);i++){
+      const m = lines[i].match(/^([A-Z_]+):\s*(.*)\s*$/);
+      if(!m) continue;
+      const k = m[1];
+      const v = m[2];
+      if(k==='STATE') out.state = v;
+      if(k==='TITLE') out.title = v;
+      if(k==='OWNER') out.owner = v;
+      if(k==='UPDATED') out.updated = v;
+    }
+    return out;
+  }
+
+  async function loadWhatsNext(){
+    if(!agents.length) return;
+    const cards = [];
+    for(const a of agents){
+      try{
+        const r = await j(`/api/file?agentId=${encodeURIComponent(a.id)}&filename=${encodeURIComponent('WHATSNEXT.md')}`);
+        const info = parseWhatsNext(r.content || '');
+        cards.push({ agentId: a.id, ok: true, content: r.content || '', info });
+      }catch(e){
+        cards.push({ agentId: a.id, ok: false, error: e.message });
+      }
+    }
+
+    const active = cards.filter(c => c.ok).length;
+    $('nextMeta').textContent = `${active}/${cards.length} files`;
+
+    $('nextCards').innerHTML = cards.map(c => {
+      if(!c.ok){
+        return `<div class="tile"><div style="display:flex;justify-content:space-between;gap:10px"><div class="tileTitle">${c.agentId}</div><span class="pill warn">missing</span></div><div class="tileBody">No <span class="mono">WHATSNEXT.md</span> (or not allowlisted). Add it to this agent workspace.</div></div>`;
+      }
+      const state = (c.info.state || 'UNSPECIFIED').toUpperCase();
+      const pill = state.includes('COMP') ? 'good' : (state.includes('BLOCK') ? 'warn' : '');
+      const title = c.info.title || `WHATSNEXT.md`;
+      const updated = c.info.updated || '';
+      const owner = c.info.owner || '';
+      const snippet = (c.content || '').split('\n').slice(0, 28).join('\n');
+      const safe = snippet.replace(/[&<>]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+      return `<div class="tile">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+          <div>
+            <div class="tileTitle">${c.agentId} — ${title}</div>
+            <div class="tileBody"><span class="k">STATE</span>: ${state}${owner ? ` • <span class=\"k\">OWNER</span>: ${owner}`:''}${updated ? ` • <span class=\"k\">UPDATED</span>: ${updated}`:''}</div>
+          </div>
+          <span class="pill ${pill}">${state}</span>
+        </div>
+        <pre>${safe}</pre>
+      </div>`;
+    }).join('');
+  }
+
+  function openConfirm({ title, sub, bodyHtml, okText='Confirm' }){
+    return new Promise((resolve) => {
+      $('confirmTitle').textContent = title || 'Confirm';
+      $('confirmSub').textContent = sub || '';
+      $('confirmBody').innerHTML = bodyHtml || '';
+      $('confirmOk').textContent = okText;
+      $('confirm').style.display = 'block';
+
+      const cleanup = (v) => {
+        $('confirm').style.display = 'none';
+        $('confirmOk').onclick = null;
+        $('confirmCancel').onclick = null;
+        $('confirmBackdrop').onclick = null;
+        resolve(v);
+      };
+
+      $('confirmOk').onclick = () => cleanup(true);
+      $('confirmCancel').onclick = () => cleanup(false);
+      $('confirmBackdrop').onclick = () => cleanup(false);
+    });
+  }
+
+  async function saveFile(){
+    const agentId = $('agentSelect').value;
+    const filename = $('fileSelect').value;
+    const content = $('fileEditor').value;
+
+    const ok = await openConfirm({
+      title: 'Save changes?',
+      sub: `${agentId}/${filename}`,
+      okText: 'Save',
+      bodyHtml: `
+        <div style="margin-bottom:10px">
+          You’re about to overwrite <span class="mono">${agentId}/${filename}</span> in that agent’s workspace.
+        </div>
+        <div style="margin-bottom:10px">
+          Risks: bad edits can change agent behavior, break workflows, or leak sensitive context into prompts.
+        </div>
+        <div class="mono">Tip: Clawshboard writes a timestamped <b>.bak</b> backup before saving.</div>
+      `
+    });
+    if(!ok) return;
+
+    $('fileStatus').textContent = 'Saving…';
+    $('fileStatus').className = 'pill';
+    try{
+      await j('/api/file', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({agentId, filename, content}) });
+      $('fileStatus').textContent = 'Saved';
+      $('fileStatus').className = 'pill good';
+      toast('Saved', `${agentId}/${filename}`);
+    }catch(e){
+      $('fileStatus').textContent = 'Error';
+      $('fileStatus').className = 'pill bad';
+      toast('Save failed', e.message);
+    }
+  }
+
+  async function refreshAll(){
+    $('refreshBtn').disabled = true;
+    try{
+      await loadBirdView();
+      await loadAgentView();
+      await loadWhatsNext();
+      await loadHealth();
+    } finally {
+      $('refreshBtn').disabled = false;
+    }
+  }
+
+  function closeModal(){ $('modal').style.display = 'none'; }
+
+  // wiring
+  $('birdBtn').addEventListener('click', () => setView('bird'));
+  $('agentBtn').addEventListener('click', () => setView('agent'));
+  $('nextBtn').addEventListener('click', () => setView('next'));
+  $('refreshBtn').addEventListener('click', refreshAll);
+  $('loadAgentBtn').addEventListener('click', loadAgentView);
+  $('agentSelect').addEventListener('change', loadAgentView);
+  $('loadFileBtn').addEventListener('click', loadFile);
+  $('saveFileBtn').addEventListener('click', saveFile);
+
+  $('modalClose').addEventListener('click', closeModal);
+  $('modalBackdrop').addEventListener('click', closeModal);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+  $('modalExplain').addEventListener('click', () => {
+    toast('AI explain', 'Not wired yet (needs gateway model config).');
+  });
+
+  $('aiImproveBtn').addEventListener('click', async () => {
+    const agentId = $('agentSelect').value;
+    const filename = $('fileSelect').value;
+    await openConfirm({
+      title: 'Improve with AI (coming next)',
+      sub: `${agentId}/${filename}`,
+      okText: 'OK',
+      bodyHtml: `
+        This will open a prompt asking what you want improved, then generate a proposed new version.
+        <br><br>
+        <b>Safety:</b> you’ll always preview changes and confirm before writing.
+      `
+    });
+  });
+
+  // init
+  const initialView = localStorage.getItem('clawshboard:view') || 'bird';
+  setView(['bird','agent','next'].includes(initialView) ? initialView : 'bird');
+
+  refreshAll().catch(e => toast('Error', e.message));
+  setInterval(() => loadHealth().catch(()=>{}), 2500);
+</script>
+</body>
+</html>
