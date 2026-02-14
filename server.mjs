@@ -51,15 +51,32 @@ app.get('/api/health', (req, res) => {
   res.json(getHealthSnapshot());
 });
 
+function getConfiguredAgentList() {
+  // openclaw.json supports agents.list: [{id, workspace, ...}, ...]
+  const list = openclawConfig?.agents?.list;
+  if (!Array.isArray(list)) return [];
+  return list
+    .map(a => ({ id: a?.id, workspace: a?.workspace || null }))
+    .filter(a => typeof a.id === 'string' && a.id.length);
+}
+
 app.get('/api/agents', (req, res) => {
-  const agents = listAgents(openclawHome).map(id => {
-    const summary = summarizeAgent(openclawHome, id);
+  const runtimeIds = listAgents(openclawHome);
+  const configured = getConfiguredAgentList();
+
+  const allIds = new Set([...runtimeIds, ...configured.map(a => a.id)]);
+  const agents = [...allIds].sort().map(id => {
+    const summary = runtimeIds.includes(id) ? summarizeAgent(openclawHome, id) : { sessionsCount: 0, lastUpdatedAt: 0, activeCount: 0 };
+    const conf = configured.find(a => a.id === id);
     return {
       id,
-      workspace: agentWorkspaces[id] || null,
+      workspace: agentWorkspaces[id] || conf?.workspace || null,
+      configured: !!conf,
+      active: runtimeIds.includes(id),
       ...summary,
     };
   });
+
   res.json({ openclawHome, agents });
 });
 
