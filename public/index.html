@@ -114,6 +114,8 @@
     .agentLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     select{background:rgba(0,0,0,.28);color:var(--text);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:9px 10px;outline:none}
     select:focus{border-color:rgba(96,165,250,.55);box-shadow:0 0 0 3px rgba(96,165,250,.12)}
+    input[type="text"], input[type="search"]{background:rgba(0,0,0,.28);color:var(--text);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:9px 10px;outline:none}
+    input[type="text"]:focus, input[type="search"]:focus{border-color:rgba(96,165,250,.55);box-shadow:0 0 0 3px rgba(96,165,250,.12)}
     textarea{width:100%;min-height:340px;resize:vertical;background:rgba(0,0,0,.25);color:var(--text);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.45}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top}
@@ -289,7 +291,13 @@
               <span class="pill" id="agentStatus">—</span>
             </div>
 
-            <div style="margin-top:12px" class="mono">Sessions (recent)</div>
+            <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div class="mono">Sessions (recent)</div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input id="sessionFilter" type="search" placeholder="Filter sessions…" style="min-width:240px" />
+                <span class="pill" id="sessionsMeta">—</span>
+              </div>
+            </div>
             <div id="sessionsTable" style="overflow:auto;max-height:520px;margin-top:8px">Loading…</div>
           </div>
         </section>
@@ -459,6 +467,41 @@
     return 'good';
   }
 
+  function renderSessionsTable(agentId){
+    const filter = ($('sessionFilter')?.value || '').trim().toLowerCase();
+    const all = Array.isArray(window.__currentSessions) ? window.__currentSessions : [];
+    const sessions = filter
+      ? all.filter(x => {
+          const sid = (x.sessionId || '').toString().toLowerCase();
+          const label = (x.label || x.origin?.label || x.key || '').toString().toLowerCase();
+          const model = (x.modelOverride || x.model || '').toString().toLowerCase();
+          return sid.includes(filter) || label.includes(filter) || model.includes(filter);
+        })
+      : all;
+
+    $('sessionsMeta').textContent = `${sessions.length}/${all.length}`;
+
+    const rows = sessions.map(x => {
+      const updated = x.updatedAt ? new Date(x.updatedAt).toLocaleString() : '';
+      const label = (x.label || x.origin?.label || x.key || '').toString().slice(0,90);
+      const sid = (x.sessionId || '').toString();
+      const model = (x.modelOverride || x.model || '-');
+      return `<tr class="clickable" data-session="${sid}"><td class="mono">${sid||'-'}</td><td>${label}</td><td class="mono">${model}</td><td class="mono">${updated}</td></tr>`;
+    }).join('');
+
+    $('sessionsTable').innerHTML = `
+      <table>
+        <thead><tr><th>sessionId</th><th>label</th><th>model</th><th>updated</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" class="mono">No sessions found.</td></tr>'}</tbody>
+      </table>
+    `;
+
+    // click-to-open session detail
+    $('sessionsTable').querySelectorAll('tr[data-session]').forEach(tr => {
+      tr.addEventListener('click', () => openSessionModal(agentId, tr.dataset.session));
+    });
+  }
+
   async function loadHealth(){
     const h = await j('/api/health');
     const cpu = h.cpu;
@@ -562,26 +605,19 @@
     $('agentStatus').className = a?.activeCount ? 'pill good' : 'pill';
 
     const s = await j(`/api/agent/${encodeURIComponent(agentId)}/sessions`);
-    const sessions = (s.sessions || []).slice(0, 35);
-    const rows = sessions.map(x => {
-      const updated = x.updatedAt ? new Date(x.updatedAt).toLocaleString() : '';
-      const label = (x.label || x.origin?.label || x.key || '').toString().slice(0,90);
-      const sid = (x.sessionId || '').toString();
-      const model = (x.modelOverride || x.model || '-');
-      return `<tr class="clickable" data-session="${sid}"><td class="mono">${sid||'-'}</td><td>${label}</td><td class="mono">${model}</td><td class="mono">${updated}</td></tr>`;
-    }).join('');
+    window.__currentSessions = (s.sessions || []).slice(0, 120);
 
-    $('sessionsTable').innerHTML = `
-      <table>
-        <thead><tr><th>sessionId</th><th>label</th><th>model</th><th>updated</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4" class="mono">No sessions found.</td></tr>'}</tbody>
-      </table>
-    `;
+    // restore filter
+    const storedFilter = localStorage.getItem('clawshboard:sessionFilter') || '';
+    $('sessionFilter').value = storedFilter;
 
-    // click-to-open session detail
-    $('sessionsTable').querySelectorAll('tr[data-session]').forEach(tr => {
-      tr.addEventListener('click', () => openSessionModal(agentId, tr.dataset.session));
-    });
+    renderSessionsTable(agentId);
+
+    // filter interactions
+    $('sessionFilter').oninput = () => {
+      localStorage.setItem('clawshboard:sessionFilter', $('sessionFilter').value);
+      renderSessionsTable(agentId);
+    };
   }
 
   async function openSessionModal(agentId, sessionId){
@@ -769,7 +805,15 @@
 
   $('modalClose').addEventListener('click', closeModal);
   $('modalBackdrop').addEventListener('click', closeModal);
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeModal();
+    if(e.key === '/' && $('agentView').style.display !== 'none'){
+      const t = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if(t === 'input' || t === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
+      e.preventDefault();
+      $('sessionFilter')?.focus();
+    }
+  });
 
   $('modalExplain').addEventListener('click', () => {
     toast('AI explain', 'Not wired yet (needs gateway model config).');
