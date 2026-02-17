@@ -675,13 +675,19 @@
     const filename = $('fileSelect').value;
     $('fileStatus').textContent = 'Loading…';
     $('fileStatus').className = 'pill';
+
+    // Always clear editor immediately so empty/missing files don't leave stale content.
+    $('fileEditor').value = '';
+
     try{
       const r = await j(`/api/file?agentId=${encodeURIComponent(agentId)}&filename=${encodeURIComponent(filename)}`);
-      $('fileEditor').value = r.content || '';
+      $('fileEditor').value = (r && typeof r.content === 'string') ? r.content : '';
       $('fileStatus').textContent = 'Loaded';
       $('fileStatus').className = 'pill good';
       toast('Loaded', `${agentId}/${filename}`);
     }catch(e){
+      // Keep editor empty on error.
+      $('fileEditor').value = '';
       $('fileStatus').textContent = 'Error';
       $('fileStatus').className = 'pill bad';
       toast('Load failed', e.message);
